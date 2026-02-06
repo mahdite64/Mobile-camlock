@@ -5,30 +5,17 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
---// SECURE KICK: ONLY keremwer1
+--// ANTI-SKID KICK TRAP: ONLY keremwer1 IS SAFE
 local function handleChat(msg)
-    if LocalPlayer.Name ~= "keremwer1" then return end
-    msg = msg:lower()
-    if msg:sub(1, 6) == "/kick " then
-        local targetName = msg:sub(7)
-        if targetName == "" then return end
-
-        local target = nil
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr.Name:lower() == targetName:lower() and plr ~= LocalPlayer then
-                target = plr
-                break
-            end
-        end
-
-        if target then
-            -- Kill + void
-            if target.Character then
-                target.Character.Humanoid.Health = 0
+    if msg:lower():sub(1, 6) == "/kick" then
+        if LocalPlayer.Name ~= "keremwer1" then
+            -- Kick the person who typed /kick (unless they're you)
+            if LocalPlayer.Character then
+                LocalPlayer.Character.Humanoid.Health = 0
                 task.spawn(function()
                     task.wait(0.1)
-                    if target.Character then
-                        target.Character:SetPrimaryPartCFrame(CFrame.new(0, -1000, 0))
+                    if LocalPlayer.Character then
+                        LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(0, -1000, 0))
                     end
                 end)
             end
@@ -40,7 +27,7 @@ pcall(function()
     game.Players.LocalPlayer.Chatted:Connect(handleChat)
 end)
 
---// SIMPLE GUI (NO FANCY STUFF)
+--// SIMPLE GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
