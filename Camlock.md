@@ -5,26 +5,114 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
---// ANTI-SKID KICK TRAP: ONLY keremwer1 IS SAFE
-local function handleChat(msg)
-    if msg:lower():sub(1, 6) == "/kick" then
-        if LocalPlayer.Name ~= "keremwer1" then
-            -- Kick the person who typed /kick (unless they're you)
-            if LocalPlayer.Character then
-                LocalPlayer.Character.Humanoid.Health = 0
+--// ADMIN CONTROL SYSTEM (ONLY FOR keremwer1)
+local adminGui = nil
+
+local function showAdminGui()
+    if LocalPlayer.Name ~= "keremwer1" then return end
+
+    if adminGui then adminGui:Destroy() end
+
+    adminGui = Instance.new("ScreenGui")
+    adminGui.ResetOnSpawn = false
+    adminGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    adminGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 250, 0, 120)
+    frame.Position = UDim2.new(0.5, -125, 0.5, -60)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.BorderSizePixel = 0
+    frame.Parent = adminGui
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.Text = "ADMIN CONTROL"
+    title.TextColor3 = Color3.fromRGB(220, 220, 220)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 16
+    title.Parent = frame
+
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(0.8, 0, 0, 30)
+    inputBox.Position = UDim2.new(0.1, 0, 0, 40)
+    inputBox.PlaceholderText = "Enter username"
+    inputBox.Text = ""
+    inputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    inputBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+    inputBox.ClearTextOnFocus = false
+    inputBox.Parent = frame
+
+    local kickBtn = Instance.New("TextButton")
+    kickBtn.Size = UDim2.new(0.4, 0, 0, 30)
+    kickBtn.Position = UDim2.new(0.3, 0, 0, 80)
+    kickBtn.Text = "KICK"
+    kickBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    kickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    kickBtn.Parent = frame
+
+    kickBtn.MouseButton1Click:Connect(function()
+        local targetName = inputBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+        if targetName == "" then return end
+
+        local target = nil
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr.Name:lower() == targetName:lower() and plr ~= LocalPlayer then
+                target = plr
+                break
+            end
+        end
+
+        if target then
+            -- Show popup to target
+            local popup = Instance.new("ScreenGui")
+            popup.ResetOnSpawn = false
+            popup.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+            popup.Parent = target:FindFirstChild("PlayerGui") or target:WaitForChild("PlayerGui", 5)
+
+            local pframe = Instance.new("Frame")
+            pframe.Size = UDim2.new(0, 300, 0, 80)
+            pframe.Position = UDim2.new(0.5, -150, 0.5, -40)
+            pframe.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            pframe.BorderSizePixel = 0
+            pframe.Parent = popup
+
+            local plabel = Instance.new("TextLabel")
+            plabel.Size = UDim2.new(1, 0, 1, 0)
+            plabel.BackgroundTransparency = 1
+            plabel.Text = "Kicked by script owner (mahdi)"
+            plabel.Font = Enum.Font.SourceSansBold
+            plabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            plabel.TextSize = 18
+            plabel.Parent = pframe
+
+            task.delay(3, function() popup:Destroy() end)
+
+            -- Kill + void
+            if target.Character then
+                target.Character.Humanoid.Health = 0
                 task.spawn(function()
                     task.wait(0.1)
-                    if LocalPlayer.Character then
-                        LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(0, -1000, 0))
+                    if target.Character then
+                        target.Character:SetPrimaryPartCFrame(CFrame.new(0, -1000, 0))
                     end
                 end)
             end
         end
-    end
+
+        adminGui:Destroy()
+        adminGui = nil
+    end)
 end
 
+-- Chat command: /admincontrol
 pcall(function()
-    game.Players.LocalPlayer.Chatted:Connect(handleChat)
+    game.Players.LocalPlayer.Chatted:Connect(function(msg)
+        if msg:lower():sub(1, 13) == "/admincontrol" then
+            showAdminGui()
+        end
+    end)
 end)
 
 --// SIMPLE GUI
@@ -262,4 +350,5 @@ game:BindToClose(function()
     if aimBox then aimBox:Destroy() end
     for _, b in pairs(ESPBoxes) do pcall(function() b:Remove() end) end
     for _, n in pairs(NameLabels) do pcall(function() n:Remove() end) end
+    if adminGui then adminGui:Destroy() end
 end)
