@@ -4,176 +4,88 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-local Chat = game:GetService("Chat")
 
---// ADD KICK COMMAND VIA CHAT
+--// SECURE KICK: ONLY keremwer1
 local function handleChat(msg)
+    if LocalPlayer.Name ~= "keremwer1" then return end
     msg = msg:lower()
     if msg:sub(1, 6) == "/kick " then
         local targetName = msg:sub(7)
         if targetName == "" then return end
 
-        -- Find player (case-insensitive)
-        local targetPlayer = nil
+        local target = nil
         for _, plr in ipairs(Players:GetPlayers()) do
-            if plr.Name:lower() == targetName:lower() then
-                targetPlayer = plr
+            if plr.Name:lower() == targetName:lower() and plr ~= LocalPlayer then
+                target = plr
                 break
             end
         end
 
-        if targetPlayer and targetPlayer ~= LocalPlayer then
-            -- Kick them with custom message
-            local kickMsg = "Kicked by script owner (keremwer1)"
-            if targetPlayer:FindFirstChild("PlayerGui") then
-                local screen = Instance.new("ScreenGui")
-                screen.ResetOnSpawn = false
-                screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-                local frame = Instance.new("Frame")
-                frame.Size = UDim2.new(0, 300, 0, 80)
-                frame.Position = UDim2.new(0.5, -150, 0.5, -40)
-                frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                frame.BorderSizePixel = 0
-                frame.Parent = screen
-
-                local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(1, 0, 1, 0)
-                label.BackgroundTransparency = 1
-                label.Text = kickMsg
-                label.Font = Enum.Font.SourceSansBold
-                label.TextColor3 = Color3.fromRGB(255, 100, 100)
-                label.TextSize = 18
-                label.Parent = frame
-
-                screen.Parent = targetPlayer.PlayerGui
-                task.delay(3, function() screen:Destroy() end)
+        if target then
+            -- Kill + void
+            if target.Character then
+                target.Character.Humanoid.Health = 0
+                task.spawn(function()
+                    task.wait(0.1)
+                    if target.Character then
+                        target.Character:SetPrimaryPartCFrame(CFrame.new(0, -1000, 0))
+                    end
+                end)
             end
-
-            -- Actually remove them from the game (teleport to void or disconnect)
-            if targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-                targetPlayer.Character.Humanoid.Health = 0
-            end
-
-            -- Optional: Force respawn far away (anti-rejoin trick)
-            task.spawn(function()
-                task.wait(0.1)
-                if targetPlayer.Character then
-                    targetPlayer.Character:SetPrimaryPartCFrame(CFrame.new(0, -1000, 0))
-                end
-            end)
         end
     end
 end
 
--- Hook into chat (works on Delta)
-if Chat and Chat:FindFirstChild("ChatWindow") then
-    -- Modern Roblox (new chat)
-    pcall(function()
-        game:GetService("StarterGui").CoreGui.ChatScript.ChatChannelHandler.SpeakerAdded:Connect(function(speakerName)
-            if speakerName == LocalPlayer.Name then
-                local speaker = game:GetService("StarterGui").CoreGui.ChatScript.ChatChannelHandler:GetSpeaker(speakerName)
-                speaker.MessagePosted:Connect(function(msg, channel)
-                    handleChat(msg)
-                end)
-            end
-        end)
-    end)
-else
-    -- Fallback: old chat or direct input
-    pcall(function()
-        game.Players.LocalPlayer.Chatted:Connect(handleChat)
-    end)
-end
-
---// MAKE GUI DRAGGABLE (SMOOTH, NO TWEENING)
-local function makeDraggable(guiFrame, dragBar)
-    local dragging = false
-    local dragStart
-    local startPos
-
-    dragBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = guiFrame.Position
-        end
-    end)
-
-    dragBar.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = Vector2.new(input.Position.X - dragStart.X, input.Position.Y - dragStart.Y)
-            guiFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
---// MAIN GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CleanAimGUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 190, 0, 100)
-MainFrame.Position = UDim2.new(0, 50, 0, 150)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-
--- Draggable top bar
-local DragBar = Instance.new("Frame")
-DragBar.Size = UDim2.new(1, 0, 0, 20)
-DragBar.Position = UDim2.new(0, 0, 0, 0)
-DragBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-DragBar.BorderSizePixel = 0
-DragBar.Parent = MainFrame
-
-makeDraggable(MainFrame, DragBar)
-
--- Close button
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -20, 0, 0)
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-CloseBtn.BorderSizePixel = 0
-CloseBtn.Parent = DragBar
-
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
+pcall(function()
+    game.Players.LocalPlayer.Chatted:Connect(handleChat)
 end)
 
--- Labels
-local ESPLabel = Instance.new("TextLabel")
-ESPLabel.Size = UDim2.new(0, 100, 0, 25)
-ESPLabel.Position = UDim2.new(0, 10, 0, 30)
-ESPLabel.Text = "ESP Names:"
-ESPLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-ESPLabel.BackgroundTransparency = 1
-ESPLabel.Font = Enum.Font.SourceSans
-ESPLabel.TextSize = 14
-ESPLabel.Parent = MainFrame
+--// SIMPLE GUI (NO FANCY STUFF)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local CamlockLabel = Instance.new("TextLabel")
-CamlockLabel.Size = UDim2.new(0, 100, 0, 25)
-CamlockLabel.Position = UDim2.new(0, 10, 0, 60)
-CamlockLabel.Text = "Camlock:"
-CamlockLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-CamlockLabel.BackgroundTransparency = 1
-CamlockLabel.Font = Enum.Font.SourceSans
-CamlockLabel.TextSize = 14
-CamlockLabel.Parent = MainFrame
+-- Toggle Button (top-left)
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 50, 0, 30)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
+ToggleBtn.Text = "☰"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Parent = ScreenGui
 
---// ESP SYSTEM
+-- Main Panel
+local Panel = Instance.new("Frame")
+Panel.Size = UDim2.new(0, 180, 0, 80)
+Panel.Position = UDim2.new(0, 10, 0, 50)
+Panel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Panel.Visible = false
+Panel.Parent = ScreenGui
+
+-- ESP Button
+local ESPBtn = Instance.new("TextButton")
+ESPBtn.Size = UDim2.new(1, 0, 0, 30)
+ESPBtn.Position = UDim2.new(0, 0, 0, 0)
+ESPBtn.Text = "ESP: OFF"
+ESPBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPBtn.Parent = Panel
+
+-- Camlock Button
+local CamlockBtn = Instance.new("TextButton")
+CamlockBtn.Size = UDim2.new(1, 0, 0, 30)
+CamlockBtn.Position = UDim2.new(0, 0, 0, 35)
+CamlockBtn.Text = "Camlock: OFF"
+CamlockBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+CamlockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CamlockBtn.Parent = Panel
+
+-- Toggle visibility
+ToggleBtn.MouseButton1Click:Connect(function()
+    Panel.Visible = not Panel.Visible
+end)
+
+-- ESP Logic
 local espEnabled = false
 local ESPBoxes = {}
 local NameLabels = {}
@@ -219,23 +131,13 @@ local function updateESP()
     end
 end
 
--- ESP Toggle
-local ESPBtn = Instance.new("TextButton")
-ESPBtn.Size = UDim2.new(0, 50, 0, 20)
-ESPBtn.Position = UDim2.new(0, 110, 0, 32)
-ESPBtn.Text = "OFF"
-ESPBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ESPBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-ESPBtn.BorderSizePixel = 0
-ESPBtn.Parent = MainFrame
-
 ESPBtn.MouseButton1Click:Connect(function()
     espEnabled = not espEnabled
-    ESPBtn.Text = espEnabled and "ON" or "OFF"
-    ESPBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(50, 50, 50)
+    ESPBtn.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
+    ESPBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(60, 60, 60)
 end)
 
---// CAMLOCK: SINGLE-TARGET, 7s FREEZE, TAP-TO-LOCK
+-- Camlock Logic
 local camlockEnabled = false
 local aimBox = nil
 local isFrozen = false
@@ -327,16 +229,6 @@ local function createAimBox()
     end)
 end
 
--- Camlock Toggle
-local CamlockBtn = Instance.new("TextButton")
-CamlockBtn.Size = UDim2.new(0, 50, 0, 20)
-CamlockBtn.Position = UDim2.new(0, 110, 0, 62)
-CamlockBtn.Text = "OFF"
-CamlockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-CamlockBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-CamlockBtn.BorderSizePixel = 0
-CamlockBtn.Parent = MainFrame
-
 CamlockBtn.MouseButton1Click:Connect(function()
     if camlockEnabled then
         camlockEnabled = false
@@ -345,8 +237,8 @@ CamlockBtn.MouseButton1Click:Connect(function()
         dragAllowed = true
         lockedTarget = nil
         if aimBox then aimBox:Destroy() aimBox = nil end
-        CamlockBtn.Text = "OFF"
-        CamlockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        CamlockBtn.Text = "Camlock: OFF"
+        CamlockBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     else
         camlockEnabled = true
         isFrozen = false
@@ -354,12 +246,12 @@ CamlockBtn.MouseButton1Click:Connect(function()
         dragAllowed = true
         lockedTarget = nil
         createAimBox()
-        CamlockBtn.Text = "ON"
+        CamlockBtn.Text = "Camlock: ON"
         CamlockBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
     end
 end)
 
---// MAIN LOOP
+-- Main Loop
 RunService.RenderStepped:Connect(function()
     if espEnabled then
         for _, plr in ipairs(Players:GetPlayers()) do
@@ -378,13 +270,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
---// CLEANUP
+-- Cleanup
 game:BindToClose(function()
     if aimBox then aimBox:Destroy() end
-    for _, b in pairs(ESPBoxes) do
-        pcall(function() b:Remove() end)
-    end
-    for _, n in pairs(NameLabels) do
-        pcall(function() n:Remove() end)
-    end
+    for _, b in pairs(ESPBoxes) do pcall(function() b:Remove() end) end
+    for _, n in pairs(NameLabels) do pcall(function() n:Remove() end) end
 end)
