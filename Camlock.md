@@ -10,6 +10,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
+-- Toggle Button (top-left)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size = UDim2.new(0, 50, 0, 30)
 ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
@@ -18,14 +19,15 @@ ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleBtn.Parent = ScreenGui
 
+-- Main Panel
 local Panel = Instance.new("Frame")
-Panel.Size = UDim2.new(0, 180, 0, 170)
+Panel.Size = UDim2.new(0, 180, 0, 170) -- taller for new buttons
 Panel.Position = UDim2.new(0, 10, 0, 50)
 Panel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 Panel.Visible = false
 Panel.Parent = ScreenGui
 
--- Buttons
+-- ESP Names Button
 local ESPBtn = Instance.new("TextButton")
 ESPBtn.Size = UDim2.new(1, 0, 0, 30)
 ESPBtn.Position = UDim2.new(0, 0, 0, 0)
@@ -34,6 +36,7 @@ ESPBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 ESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ESPBtn.Parent = Panel
 
+-- Camlock Button
 local CamlockBtn = Instance.new("TextButton")
 CamlockBtn.Size = UDim2.new(1, 0, 0, 30)
 CamlockBtn.Position = UDim2.new(0, 0, 0, 35)
@@ -42,6 +45,7 @@ CamlockBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 CamlockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CamlockBtn.Parent = Panel
 
+-- Highlighted ESP Button
 local HighlightESPBtn = Instance.new("TextButton")
 HighlightESPBtn.Size = UDim2.new(1, 0, 0, 30)
 HighlightESPBtn.Position = UDim2.new(0, 0, 0, 70)
@@ -50,6 +54,7 @@ HighlightESPBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 HighlightESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HighlightESPBtn.Parent = Panel
 
+-- Click TP Button
 local TPBtn = Instance.new("TextButton")
 TPBtn.Size = UDim2.new(1, 0, 0, 30)
 TPBtn.Position = UDim2.new(0, 0, 0, 105)
@@ -58,6 +63,7 @@ TPBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 TPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 TPBtn.Parent = Panel
 
+-- Tool ESP Button
 local ToolESPBtn = Instance.new("TextButton")
 ToolESPBtn.Size = UDim2.new(1, 0, 0, 30)
 ToolESPBtn.Position = UDim2.new(0, 0, 0, 140)
@@ -66,6 +72,7 @@ ToolESPBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 ToolESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToolESPBtn.Parent = Panel
 
+-- Toggle visibility
 ToggleBtn.MouseButton1Click:Connect(function()
     Panel.Visible = not Panel.Visible
 end)
@@ -120,16 +127,6 @@ ESPBtn.MouseButton1Click:Connect(function()
     espEnabled = not espEnabled
     ESPBtn.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
     ESPBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(60, 60, 60)
-
-    if not espEnabled then
-        -- ✅ FIX: Hide all ESP immediately
-        for _, box in pairs(ESPBoxes) do
-            box.Visible = false
-        end
-        for _, name in pairs(NameLabels) do
-            name.Visible = false
-        end
-    end
 end)
 
 --// HIGHLIGHTED ESP
@@ -284,44 +281,37 @@ TPBtn.MouseButton1Click:Connect(function()
     end
 end)
 
---// TOOL ESP ✅ FIXED
+--// TOOL ESP
 local ToolLabels = {}
 local toolESPEnabled = false
 
 local function addToolESP(player)
     if player == LocalPlayer or not player.Character then return end
     local label = ToolLabels[player] or Drawing.new("Text")
-    label.Text = "Tool: nothing"
+    label.Text = "Tool: loading..."
     label.Size = 14
-    label.Color = Color3.fromRGB(255, 255, 0)
+    label.Color = Color3.fromRGB(255, 255, 0) -- Yellow
     label.Center = true
     label.Outline = true
-    label.Visible = toolESPEnabled -- ✅ Only visible if enabled
+    label.Visible = false
     ToolLabels[player] = label
 end
 
 local function updateToolESP()
-    if not toolESPEnabled then
-        -- ✅ Hide all if disabled
-        for _, label in pairs(ToolLabels) do
-            label.Visible = false
-        end
-        return
-    end
-
+    if not toolESPEnabled then return end
     for player, label in pairs(ToolLabels) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local character = player.Character
             local toolName = "nothing"
-
-            -- Check equipped tools
+            
+            -- Check character for equipped tool
             for _, child in ipairs(character:GetChildren()) do
                 if child:IsA("Tool") then
                     toolName = child.Name
                     break
                 end
             end
-            -- Check backpack
+            -- If none, check backpack
             if toolName == "nothing" then
                 local backpack = player:FindFirstChild("Backpack")
                 if backpack then
@@ -354,30 +344,20 @@ ToolESPBtn.MouseButton1Click:Connect(function()
     ToolESPBtn.Text = "Tool ESP: " .. (toolESPEnabled and "ON" or "OFF")
     ToolESPBtn.BackgroundColor3 = toolESPEnabled and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(60, 60, 60)
 
-    -- ✅ Create labels for all players when enabled
     if toolESPEnabled then
         for _, plr in ipairs(Players:GetPlayers()) do
             if not ToolLabels[plr] then
                 addToolESP(plr)
             end
         end
-    end
-
-    -- ✅ Force update visibility
-    updateToolESP()
-end)
-
--- Handle new players for Tool ESP
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        if toolESPEnabled then
-            addToolESP(player)
+    else
+        for _, label in pairs(ToolLabels) do
+            label.Visible = false
         end
-    end)
+    end
 end)
 
---// CAMLOCK (unchanged)
+--// CAMLOCK LOGIC
 local camlockEnabled = false
 local aimBox = nil
 local isFrozen = false
@@ -493,8 +473,20 @@ end)
 
 --// MAIN LOOP
 RunService.RenderStepped:Connect(function()
-    updateESP()       -- ✅ Now always runs (but exits early if off)
-    updateToolESP()   -- ✅ Same
+    if espEnabled then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if not ESPBoxes[plr] then addESP(plr) end
+        end
+        updateESP()
+    end
+
+    if toolESPEnabled then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if not ToolLabels[plr] then addToolESP(plr) end
+        end
+        updateToolESP()
+    end
+
     if camlockEnabled and isFrozen and isTouching and lockedTarget then
         if lockedTarget.Parent and lockedTarget.Parent:FindFirstChild("HumanoidRootPart") then
             aimAt(lockedTarget)
