@@ -4,7 +4,122 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local StarterGui = game:GetService("StarterGui")
 
+--// SERVICES (KEEP YOUR EXISTING ONES)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
+
+--// AUTO STAFF DETECTION (MADE BY MAHDI - ALWAYS ON, REAL KICK)
+local staffPlayers = {
+    groups = {
+        [4165692] = { -- crimcorp
+            ["Tester"] = true, ["Contributor"] = true, ["Tester+"] = true, ["Developer"] = true,
+            ["Developer+"] = true, ["Community Manager"] = true, ["Manager"] = true, ["Owner"] = true
+        },
+        [32406137] = { -- staff thing
+            ["Junior"] = true, ["Moderator"] = true, ["Senior"] = true, ["Administrator"] = true,
+            ["Manager"] = true, ["Holder"] = true
+        },
+        [8024440] = { -- r3shape fanclub
+            ["zzzz"] = true, ["reshape enjoyer"] = true, ["i heart reshape"] = true, ["reshape superfan"] = true
+        },
+        [14927228] = { -- War Room
+            ["♞"] = true
+        }
+    },
+    users = {
+        3294804378, 93676120, 54087314, 81275825, 140837601, 1229486091, 46567801, 418086275, 29706395,
+        3717066084, 1424338327, 5046662686, 5046661126, 5046659439, 418199326, 1024216621, 1810535041,
+        63238912, 111250044, 63315426, 730176906, 141193516, 194512073, 193945439, 412741116, 195538733,
+        102045519, 955294, 957835150, 25689921, 366613818, 281593651, 455275714, 208929505, 96783330,
+        156152502, 93281166, 959606619, 142821118, 632886139, 175931803, 122209625, 278097946, 142989311,
+        1517131734, 446849296, 87189764, 67180844, 9212846, 47352513, 48058122, 155413858, 10497435,
+        513615792, 55893752, 55476024, 151691292, 136584758, 16983447, 3111449, 94693025, 271400893,
+        5005262660, 295331237, 64489098, 244844600, 114332275, 25048901, 69262878, 50801509, 92504899,
+        42066711, 50585425, 31365111, 166406495, 2457253857, 29761878, 21831137, 948293345, 439942262,
+        38578487, 1163048, 7713309208, 3659305297, 15598614, 34616594, 626833004, 198610386, 153835477,
+        3923114296, 3937697838, 102146039, 119861460, 371665775, 1206543842, 93428604, 1863173316, 90814576,
+        374665997, 423005063, 140172831, 42662179, 9066859, 438805620, 14855669, 727189337, 1871290386,
+        608073286
+    }
+}
+
+local function hasTracker(player)
+    if not player or not player:IsA("Player") then return false, nil end
+    for _, child in ipairs(player:GetChildren()) do
+        if typeof(child.Name) == "string" and string.sub(child.Name, -8) == "Tracker$" then
+            local trackedPlayerName = string.sub(child.Name, 1, -9)
+            if Players:FindFirstChild(trackedPlayerName) then
+                return true, trackedPlayerName
+            end
+        end
+    end
+    return false, nil
+end
+
+local function isStaff(player)
+    if not player or not player:IsA("Player") then return false end
+    if staffPlayers.groups then
+        for groupID, roles in pairs(staffPlayers.groups) do
+            local successRank, rank = pcall(function() return player:GetRankInGroup(groupID) end)
+            if successRank and rank and rank > 0 then
+                local successRole, roleName = pcall(function() return player:GetRoleInGroup(groupID) end)
+                if successRole and roleName and roles[roleName] then
+                    return true, roleName, groupID
+                end
+            end
+        end
+    end
+    if staffPlayers.users then
+        for _, id in ipairs(staffPlayers.users) do
+            if player.UserId == id then
+                return true, "UserID", id
+            end
+        end
+    end
+    return false
+end
+
+local function kickWithStaffInfo(playerName, reason)
+    local msg = "Staff joined\n\n- " .. playerName .. " (" .. reason .. ")"
+    if LocalPlayer then
+        LocalPlayer:Kick(msg)
+    end
+end
+
+local function monitorPlayer(player)
+    if player == LocalPlayer then return end
+    local isPlayerStaff, role, groupID = isStaff(player)
+    local hasTrackers, trackedPlayer = hasTracker(player)
+
+    if isPlayerStaff or hasTrackers then
+        local reason = hasTrackers and "Tracker" or (role == "UserID" and "UserID" or role)
+        kickWithStaffInfo(player.Name, reason)
+    end
+end
+
+-- 🔥 SHOW NOTIFICATION IMMEDIATELY ON EXECUTE
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Staff Detection ON",
+        Text = "Made by mahdi",
+        Duration = 4
+    })
+end)
+
+-- Check all current players
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(monitorPlayer, player)
+end
+
+-- Monitor new players
+Players.PlayerAdded:Connect(monitorPlayer)
+
+--// YOUR EXACT SCRIPT STARTS HERE (UNCHANGED)
 --// SIMPLE GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.ResetOnSpawn = false
