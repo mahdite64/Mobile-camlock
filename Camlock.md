@@ -192,41 +192,75 @@ ToggleBtn.MouseButton1Click:Connect(function()
     Panel.Visible = not Panel.Visible
 end)
 
---// ESP NAMES
+--// ESP NAMES + BOXES (FULL FIXED)
 local espEnabled = false
 local ESPBoxes = {}
 local NameLabels = {}
 
+local function removeESP(player)
+    if ESPBoxes[player] then
+        pcall(function() ESPBoxes[player]:Remove() end)
+        ESPBoxes[player] = nil
+    end
+    if NameLabels[player] then
+        pcall(function() NameLabels[player]:Remove() end)
+        NameLabels[player] = nil
+    end
+end
+
 local function addESP(player)
-    if player == LocalPlayer or not player.Character then return end
-    local box = ESPBoxes[player] or Drawing.new("Square")
+    if player == LocalPlayer then return end
+    removeESP(player)
+
+    local box = Drawing.new("Square")
     box.Color = Color3.fromRGB(255, 255, 255)
     box.Thickness = 2
     box.Transparency = 1
     box.Filled = false
+    box.Visible = false
     ESPBoxes[player] = box
 
-    local name = NameLabels[player] or Drawing.new("Text")
+    local name = Drawing.new("Text")
     name.Text = player.Name
     name.Size = 15
     name.Color = Color3.fromRGB(255, 255, 255)
     name.Center = true
     name.Outline = true
+    name.Visible = false
     NameLabels[player] = name
 end
 
 local function updateESP()
-    if not espEnabled then return end
+    if not espEnabled then
+        for _, box in pairs(ESPBoxes) do box.Visible = false end
+        for _, name in pairs(NameLabels) do name.Visible = false end
+        return
+    end
+
     for player, box in pairs(ESPBoxes) do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
-            local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+        if hrp then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
             if onScreen then
-                box.Size = Vector2.new(2000 / screenPos.Z, 3000 / screenPos.Z)
-                box.Position = Vector2.new(screenPos.X - box.Size.X/2, screenPos.Y - box.Size.Y/2)
+                local sizeX = 2000 / screenPos.Z
+                local sizeY = 3000 / screenPos.Z
+
+                box.Size = Vector2.new(sizeX, sizeY)
+                box.Position = Vector2.new(
+                    screenPos.X - sizeX / 2,
+                    screenPos.Y - sizeY / 2
+                )
                 box.Visible = true
-                NameLabels[player].Position = Vector2.new(screenPos.X, screenPos.Y - box.Size.Y/2 - 10)
-                NameLabels[player].Visible = true
+
+                local nameLabel = NameLabels[player]
+                nameLabel.Position = Vector2.new(
+                    screenPos.X,
+                    screenPos.Y - sizeY / 2 - 10
+                )
+                nameLabel.Visible = true
             else
                 box.Visible = false
                 NameLabels[player].Visible = false
@@ -241,8 +275,37 @@ end
 ESPBtn.MouseButton1Click:Connect(function()
     espEnabled = not espEnabled
     ESPBtn.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
-    ESPBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(60, 60, 60)
+    ESPBtn.BackgroundColor3 = espEnabled
+        and Color3.fromRGB(100, 200, 100)
+        or Color3.fromRGB(60, 60, 60)
+
+    if espEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            addESP(player)
+        end
+    else
+        for _, box in pairs(ESPBoxes) do box.Visible = false end
+        for _, name in pairs(NameLabels) do name.Visible = false end
+    end
 end)
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if espEnabled then
+            task.wait(0.2)
+            addESP(player)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
+
+--// CALL THIS IN RenderStepped
+-- updateESP()
+
+
 
 --// HIGHLIGHTED ESP
 local highlightedESPEnabled = false
@@ -396,52 +459,63 @@ TPBtn.MouseButton1Click:Connect(function()
     end
 end)
 
---// TOOL ESP
-local ToolLabels = {}
+--// TOOL ESP (FINAL, EQUIPPED ONLY)
 local toolESPEnabled = false
+local ToolLabels = {}
+
+local function removeToolESP(player)
+    if ToolLabels[player] then
+        pcall(function() ToolLabels[player]:Remove() end)
+        ToolLabels[player] = nil
+    end
+end
 
 local function addToolESP(player)
-    if player == LocalPlayer or not player.Character then return end
-    local label = ToolLabels[player] or Drawing.new("Text")
-    label.Text = "Tool: loading..."
+    if player == LocalPlayer then return end
+    removeToolESP(player)
+
+    local label = Drawing.new("Text")
     label.Size = 14
-    label.Color = Color3.fromRGB(255, 255, 0) -- Yellow
+    label.Color = Color3.fromRGB(255, 255, 0)
     label.Center = true
     label.Outline = true
+    label.Text = "Tool: nothing"
     label.Visible = false
+
     ToolLabels[player] = label
 end
 
-local function updateToolESP()
-    if not toolESPEnabled then return end
-    for player, label in pairs(ToolLabels) do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local character = player.Character
-            local toolName = "nothing"
-            
-            -- Check character for equipped tool
-            for _, child in ipairs(character:GetChildren()) do
-                if child:IsA("Tool") then
-                    toolName = child.Name
-                    break
-                end
-            end
-            -- If none, check backpack
-            if toolName == "nothing" then
-                local backpack = player:FindFirstChild("Backpack")
-                if backpack then
-                    for _, item in ipairs(backpack:GetChildren()) do
-                        if item:IsA("Tool") then
-                            toolName = item.Name
-                            break
-                        end
-                    end
-                end
-            end
+local function getEquippedTool(player)
+    local char = player.Character
+    if not char then return "nothing" end
 
-            label.Text = "Tool: " .. toolName
-            local pos = character.HumanoidRootPart.Position + Vector3.new(0, 4.5, 0)
-            local onScreen, screenPos = Camera:WorldToViewportPoint(pos)
+    for _, obj in ipairs(char:GetChildren()) do
+        if obj:IsA("Tool") then
+            return obj.Name
+        end
+    end
+
+    return "nothing"
+end
+
+local function updateToolESP()
+    if not toolESPEnabled then
+        for _, label in pairs(ToolLabels) do
+            label.Visible = false
+        end
+        return
+    end
+
+    for player, label in pairs(ToolLabels) do
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+        if hrp then
+            label.Text = "Tool: " .. getEquippedTool(player)
+
+            local pos = hrp.Position + Vector3.new(0, 1, 0)
+            local screenPos, onScreen = Camera:WorldToViewportPoint(pos)
+
             if onScreen then
                 label.Position = Vector2.new(screenPos.X, screenPos.Y)
                 label.Visible = true
@@ -457,13 +531,13 @@ end
 ToolESPBtn.MouseButton1Click:Connect(function()
     toolESPEnabled = not toolESPEnabled
     ToolESPBtn.Text = "Tool ESP: " .. (toolESPEnabled and "ON" or "OFF")
-    ToolESPBtn.BackgroundColor3 = toolESPEnabled and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(60, 60, 60)
+    ToolESPBtn.BackgroundColor3 = toolESPEnabled
+        and Color3.fromRGB(100, 200, 100)
+        or Color3.fromRGB(60, 60, 60)
 
     if toolESPEnabled then
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if not ToolLabels[plr] then
-                addToolESP(plr)
-            end
+        for _, player in ipairs(Players:GetPlayers()) do
+            addToolESP(player)
         end
     else
         for _, label in pairs(ToolLabels) do
@@ -471,6 +545,22 @@ ToolESPBtn.MouseButton1Click:Connect(function()
         end
     end
 end)
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if toolESPEnabled then
+            task.wait(0.2)
+            addToolESP(player)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeToolESP(player)
+end)
+
+
+
 
 --// CAMLOCK LOGIC
 local camlockEnabled = false
